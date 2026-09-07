@@ -12,6 +12,7 @@ export interface UserAccount {
 
 export const STORAGE_KEYS = {
   ATTENDANCE: 'tt_attendance_records',
+  ATTENDANCE_RECORDS: 'tt_attendance_records',
   EMPLOYEES: 'tt_employees',
   BRANCHES: 'tt_branches',
   SHIFTS: 'tt_shifts',
@@ -20,17 +21,13 @@ export const STORAGE_KEYS = {
 } as const;
 
 export interface IStorageAdapter<T = any> {
-  // Các phương thức đồng bộ danh sách đối tượng
   getAll(): Promise<T[]>;
   saveAll(items: T[]): Promise<void>;
-
-  // Các phương thức CRUD cơ bản theo key
   getItem<U = T>(key: string): Promise<U | null>;
   setItem<U = T>(key: string, value: U): Promise<void>;
   removeItem(key: string): Promise<void>;
   clear(): Promise<void>;
 
-  // Nghiệp vụ tài khoản người dùng
   getUserAccounts(): Promise<UserAccount[]>;
   createUserAccount(account: Partial<UserAccount>): Promise<UserAccount>;
   toggleAccountStatus(username: string, isActive: boolean): Promise<UserAccount>;

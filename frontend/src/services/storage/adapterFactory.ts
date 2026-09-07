@@ -3,14 +3,22 @@ import { supabase } from '../supabaseClient';
 
 class LocalStorageAdapter<T = any> implements IStorageAdapter<T> {
   private storageKey: string;
+  private defaultData: any;
 
-  constructor(storageKey: string = 'tt_default') {
+  constructor(storageKey: string = 'tt_default', defaultData: any = []) {
     this.storageKey = storageKey;
+    this.defaultData = defaultData;
   }
 
   async getAll(): Promise<T[]> {
     const raw = localStorage.getItem(this.storageKey);
-    if (!raw) return [];
+    if (!raw) {
+      if (this.defaultData) {
+        localStorage.setItem(this.storageKey, JSON.stringify(this.defaultData));
+        return this.defaultData as T[];
+      }
+      return [];
+    }
     try {
       return JSON.parse(raw) as T[];
     } catch {
@@ -106,7 +114,7 @@ class LocalStorageAdapter<T = any> implements IStorageAdapter<T> {
 class SupabaseStorageAdapter<T = any> implements IStorageAdapter<T> {
   private tableName: string;
 
-  constructor(tableName: string = 'user_accounts') {
+  constructor(tableName: string = 'user_accounts', _defaultData?: any) {
     this.tableName = tableName;
   }
 
@@ -198,11 +206,11 @@ class SupabaseStorageAdapter<T = any> implements IStorageAdapter<T> {
 
 const storageMode = import.meta.env.VITE_STORAGE_MODE || 'local';
 
-export const createAdapter = <T = any>(key?: string): IStorageAdapter<T> => {
+export const createAdapter = <T = any>(key?: string, defaultData?: any): IStorageAdapter<T> => {
   if (storageMode === 'supabase') {
-    return new SupabaseStorageAdapter<T>(key);
+    return new SupabaseStorageAdapter<T>(key, defaultData);
   }
-  return new LocalStorageAdapter<T>(key);
+  return new LocalStorageAdapter<T>(key, defaultData);
 };
 
 export const getStorageAdapter = createAdapter;
