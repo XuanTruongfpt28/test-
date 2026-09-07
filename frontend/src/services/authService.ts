@@ -1,6 +1,6 @@
 import { createAdapter } from './storage/adapterFactory';
 import { STORAGE_KEYS } from './storage/StorageAdapter';
-import type { UserAccount } from './storage/StorageAdapter';
+import type { UserAccount } from '../types';
 
 const adapter = createAdapter<UserAccount>(STORAGE_KEYS.ACCOUNTS);
 const SESSION_KEY = 'tt_session';
@@ -14,22 +14,37 @@ export const createEmployeeAccount = async (accountData: Partial<UserAccount>): 
 };
 
 export const updateAccount = async (username: string, updates: Partial<UserAccount>): Promise<UserAccount> => {
-  if (typeof updates.is_active === 'boolean') {
-    await adapter.toggleAccountStatus(username, updates.is_active);
+  if (typeof updates.isActive === 'boolean') {
+    await adapter.toggleAccountStatus(username);
   }
-  if (updates.password) {
-    await adapter.updatePassword(username, updates.password);
+  if ((updates as any).password) {
+    await adapter.updatePassword(username, (updates as any).password);
   }
   const all = await adapter.getUserAccounts();
   return all.find((a) => a.username === username) || (updates as UserAccount);
 };
 
-export const toggleAccountLock = async (username: string, currentStatus: boolean): Promise<UserAccount> => {
-  return await adapter.toggleAccountStatus(username, !currentStatus);
+export const toggleAccountLock = async (username: string): Promise<UserAccount> => {
+  return await adapter.toggleAccountStatus(username);
 };
 
 export const resetPassword = async (username: string, newPass: string): Promise<UserAccount> => {
   return await adapter.updatePassword(username, newPass);
+};
+
+export const changePersonalPassword = async (
+  username: string,
+  oldPass: string,
+  newPass: string
+): Promise<boolean> => {
+  const accounts = await adapter.getUserAccounts();
+  const current = accounts.find((a) => a.username === username);
+  if (!current) throw new Error('Không tìm thấy tài khoản');
+  if ((current as any).password && (current as any).password !== oldPass) {
+    throw new Error('Mật khẩu cũ không chính xác');
+  }
+  await adapter.updatePassword(username, newPass);
+  return true;
 };
 
 export const deleteAccount = async (username: string): Promise<boolean> => {
@@ -38,11 +53,11 @@ export const deleteAccount = async (username: string): Promise<boolean> => {
 
 export const login = async (username: string, pass: string): Promise<UserAccount | null> => {
   const accounts = await adapter.getUserAccounts();
-  const found = accounts.find((a) => a.username === username && a.password === pass);
+  const found = accounts.find((a) => a.username === username && (a as any).password === pass);
   if (!found) {
     throw new Error('Sai tài khoản hoặc mật khẩu');
   }
-  if (!found.is_active) {
+  if (!found.isActive) {
     throw new Error('Tài khoản đã bị khóa');
   }
   localStorage.setItem(SESSION_KEY, JSON.stringify(found));
@@ -69,6 +84,7 @@ export const authService = {
   updateAccount,
   toggleAccountLock,
   resetPassword,
+  changePersonalPassword,
   deleteAccount,
   login,
   logout,
