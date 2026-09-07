@@ -1,14 +1,12 @@
-import type { StorageAdapter, UserAccount } from './StorageAdapter';
+import type { IStorageAdapter, UserAccount } from './StorageAdapter';
 import { SupabaseAdapter } from './SupabaseAdapter';
 
-// Fallback Adapter dành riêng cho localStorage khi chạy offline
-class LocalStorageAdapter implements StorageAdapter {
+class LocalStorageAdapter implements IStorageAdapter {
   private key = 'tt_user_accounts';
 
   private getList(): UserAccount[] {
     const raw = localStorage.getItem(this.key);
     if (!raw) {
-      // Dữ liệu mẫu ban đầu
       const initial: UserAccount[] = [
         { username: 'admin', role: 'admin', is_active: true, branch_id: 'b_chomoi' },
         { username: 'nv001', role: 'employee', is_active: true, branch_id: 'b_chomoi' },
@@ -16,11 +14,37 @@ class LocalStorageAdapter implements StorageAdapter {
       localStorage.setItem(this.key, JSON.stringify(initial));
       return initial;
     }
-    return JSON.parse(raw);
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
   }
 
   private saveList(list: UserAccount[]): void {
     localStorage.setItem(this.key, JSON.stringify(list));
+  }
+
+  async getItem<T>(key: string): Promise<T | null> {
+    const data = localStorage.getItem(key);
+    if (!data) return null;
+    try {
+      return JSON.parse(data) as T;
+    } catch {
+      return data as unknown as T;
+    }
+  }
+
+  async setItem<T>(key: string, value: T): Promise<void> {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  async removeItem(key: string): Promise<void> {
+    localStorage.removeItem(key);
+  }
+
+  async clear(): Promise<void> {
+    localStorage.clear();
   }
 
   async getUserAccounts(): Promise<UserAccount[]> {
@@ -69,19 +93,18 @@ class LocalStorageAdapter implements StorageAdapter {
   }
 }
 
-// Kiểm tra biến môi trường
 const storageMode = import.meta.env.VITE_STORAGE_MODE || 'local';
-let currentAdapter: StorageAdapter | null = null;
+let adapterInstance: IStorageAdapter | null = null;
 
-export const getStorageAdapter = (): StorageAdapter => {
-  if (!currentAdapter) {
+export const createAdapter = (): IStorageAdapter => {
+  if (!adapterInstance) {
     if (storageMode === 'supabase') {
-      console.log('⚡ [Storage Adapter] Đang chạy với SUPABASE Database.');
-      currentAdapter = new SupabaseAdapter();
+      adapterInstance = new SupabaseAdapter();
     } else {
-      console.log('📁 [Storage Adapter] Đang chạy với LOCALSTORAGE (Offline).');
-      currentAdapter = new LocalStorageAdapter();
+      adapterInstance = new LocalStorageAdapter();
     }
   }
-  return currentAdapter;
+  return adapterInstance!;
 };
+
+export const getStorageAdapter = createAdapter;

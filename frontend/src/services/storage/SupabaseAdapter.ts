@@ -1,22 +1,35 @@
 import { supabase } from '../supabaseClient';
-import { StorageAdapter, UserAccount } from './StorageAdapter';
+import type { IStorageAdapter, UserAccount } from './StorageAdapter';
 
-export class SupabaseAdapter implements StorageAdapter {
-  // Lấy toàn bộ danh sách tài khoản
+export class SupabaseAdapter implements IStorageAdapter {
+  async getItem<T>(key: string): Promise<T | null> {
+    const { data, error } = await supabase.from(key).select('*');
+    if (error) return null;
+    return data as unknown as T;
+  }
+
+  async setItem<T>(key: string, value: T): Promise<void> {
+    await supabase.from(key).upsert(value as any);
+  }
+
+  async removeItem(_key: string): Promise<void> {
+    // Không dùng ở chế độ Supabase
+  }
+
+  async clear(): Promise<void> {
+    // Không dùng ở chế độ Supabase
+  }
+
   async getUserAccounts(): Promise<UserAccount[]> {
     const { data, error } = await supabase
       .from('user_accounts')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('[SupabaseAdapter] Lỗi lấy danh sách tài khoản:', error);
-      throw error;
-    }
+    if (error) throw error;
     return data || [];
   }
 
-  // Cấp tài khoản mới
   async createUserAccount(accountData: Partial<UserAccount>): Promise<UserAccount> {
     const payload = {
       username: accountData.username,
@@ -27,19 +40,11 @@ export class SupabaseAdapter implements StorageAdapter {
       is_active: accountData.is_active ?? true,
     };
 
-    const { data, error } = await supabase
-      .from('user_accounts')
-      .insert([payload])
-      .select();
-
-    if (error) {
-      console.error('[SupabaseAdapter] Lỗi thêm tài khoản:', error);
-      throw error;
-    }
+    const { data, error } = await supabase.from('user_accounts').insert([payload]).select();
+    if (error) throw error;
     return data[0];
   }
 
-  // Khóa / Mở khóa tài khoản
   async toggleAccountStatus(username: string, isActive: boolean): Promise<UserAccount> {
     const { data, error } = await supabase
       .from('user_accounts')
@@ -47,14 +52,10 @@ export class SupabaseAdapter implements StorageAdapter {
       .eq('username', username)
       .select();
 
-    if (error) {
-      console.error('[SupabaseAdapter] Lỗi cập nhật trạng thái tài khoản:', error);
-      throw error;
-    }
+    if (error) throw error;
     return data[0];
   }
 
-  // Đổi mật khẩu
   async updatePassword(username: string, newPassword: string): Promise<UserAccount> {
     const { data, error } = await supabase
       .from('user_accounts')
@@ -62,24 +63,13 @@ export class SupabaseAdapter implements StorageAdapter {
       .eq('username', username)
       .select();
 
-    if (error) {
-      console.error('[SupabaseAdapter] Lỗi cập nhật mật khẩu:', error);
-      throw error;
-    }
+    if (error) throw error;
     return data[0];
   }
 
-  // Xoá tài khoản
   async deleteUserAccount(username: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('user_accounts')
-      .delete()
-      .eq('username', username);
-
-    if (error) {
-      console.error('[SupabaseAdapter] Lỗi xoá tài khoản:', error);
-      throw error;
-    }
+    const { error } = await supabase.from('user_accounts').delete().eq('username', username);
+    if (error) throw error;
     return true;
   }
 }
