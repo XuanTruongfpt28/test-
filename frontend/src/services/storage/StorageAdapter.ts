@@ -15,16 +15,16 @@ export const STORAGE_KEYS = {
   EMPLOYEES: 'tt_employees',
   BRANCHES: 'tt_branches',
   SHIFTS: 'tt_shifts',
+  SHIFT_CONFIGS: 'tt_shift_configs',
   ACCOUNTS: 'tt_user_accounts',
 } as const;
 
-export interface IStorageAdapter {
-  getItem<T>(key: string): Promise<T | null>;
-  setItem<T>(key: string, value: T): Promise<void>;
+export interface IStorageAdapter<T = any> {
+  getItem<U = T>(key: string): Promise<U | null>;
+  setItem<U = T>(key: string, value: U): Promise<void>;
   removeItem(key: string): Promise<void>;
   clear(): Promise<void>;
-  
-  // Xóa bỏ các dấu '?' để TypeScript không báo undefined
+
   getUserAccounts(): Promise<UserAccount[]>;
   createUserAccount(account: Partial<UserAccount>): Promise<UserAccount>;
   toggleAccountStatus(username: string, isActive: boolean): Promise<UserAccount>;
@@ -35,4 +35,4 @@ export interface IStorageAdapter {
   getBranches?(): Promise<any[]>;
 }
 
-export type StorageAdapter = IStorageAdapter;
+export type StorageAdapter<T = any> = IStorageAdapter<T>;
