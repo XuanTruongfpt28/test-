@@ -1,70 +1,85 @@
-/**
- * ============================================================
- *  SUPABASE ADAPTER (ĐÃ SỬA TS1294 & UPSERT CONFLICT)
- * ============================================================
- */
 import { supabase } from '../supabaseClient';
-import type { IStorageAdapter } from './StorageAdapter';
+import { StorageAdapter, UserAccount } from './StorageAdapter';
 
-/** "checkInTime" -> "check_in_time" */
-function toSnakeCase(key: string): string {
-  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-}
+export class SupabaseAdapter implements StorageAdapter {
+  // Lấy toàn bộ danh sách tài khoản
+  async getUserAccounts(): Promise<UserAccount[]> {
+    const { data, error } = await supabase
+      .from('user_accounts')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-/** "check_in_time" -> "checkInTime" */
-function toCamelCase(key: string): string {
-  return key.replace(/_([a-z0-9])/g, (_match, letter: string) => letter.toUpperCase());
-}
-
-function rowToItem<T>(row: Record<string, unknown>): T {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(row)) {
-    if (value !== null) result[toCamelCase(key)] = value;
-  }
-  return result as T;
-}
-
-function itemToRow<T extends object>(item: T): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(item)) {
-    result[toSnakeCase(key)] = value;
-  }
-  return result;
-}
-
-export class SupabaseAdapter<T extends { id: string }> implements IStorageAdapter<T> {
-  // Khai báo tường minh để tương thích erasableSyntaxOnly
-  private readonly table: string;
-
-  constructor(table: string) {
-    this.table = table;
-  }
-
-  async getAll(): Promise<T[]> {
-    try {
-      const { data, error } = await supabase.from(this.table).select('*');
-      if (error) {
-        console.error(`[SupabaseAdapter] Lỗi đọc bảng "${this.table}":`, error);
-        return [];
-      }
-      return (data ?? []).map((row) => rowToItem<T>(row));
-    } catch (err) {
-      console.error(`[SupabaseAdapter] Ngoại lệ đọc bảng "${this.table}":`, err);
-      return [];
+    if (error) {
+      console.error('[SupabaseAdapter] Lỗi lấy danh sách tài khoản:', error);
+      throw error;
     }
+    return data || [];
   }
 
-  async saveAll(items: T[]): Promise<void> {
-    const rows = items.map((item) => itemToRow(item));
+  // Cấp tài khoản mới
+  async createUserAccount(accountData: Partial<UserAccount>): Promise<UserAccount> {
+    const payload = {
+      username: accountData.username,
+      password: accountData.password || '123456',
+      role: accountData.role || 'employee',
+      branch_id: accountData.branch_id || null,
+      employee_id: accountData.employee_id || null,
+      is_active: accountData.is_active ?? true,
+    };
 
-    if (rows.length > 0) {
-      const { error: upsertError } = await supabase
-        .from(this.table)
-        .upsert(rows, { onConflict: 'id' });
+    const { data, error } = await supabase
+      .from('user_accounts')
+      .insert([payload])
+      .select();
 
-      if (upsertError) {
-        console.warn(`[SupabaseAdapter] Cảnh báo ghi bảng "${this.table}":`, upsertError);
-      }
+    if (error) {
+      console.error('[SupabaseAdapter] Lỗi thêm tài khoản:', error);
+      throw error;
     }
+    return data[0];
+  }
+
+  // Khóa / Mở khóa tài khoản
+  async toggleAccountStatus(username: string, isActive: boolean): Promise<UserAccount> {
+    const { data, error } = await supabase
+      .from('user_accounts')
+      .update({ is_active: isActive })
+      .eq('username', username)
+      .select();
+
+    if (error) {
+      console.error('[SupabaseAdapter] Lỗi cập nhật trạng thái tài khoản:', error);
+      throw error;
+    }
+    return data[0];
+  }
+
+  // Đổi mật khẩu
+  async updatePassword(username: string, newPassword: string): Promise<UserAccount> {
+    const { data, error } = await supabase
+      .from('user_accounts')
+      .update({ password: newPassword })
+      .eq('username', username)
+      .select();
+
+    if (error) {
+      console.error('[SupabaseAdapter] Lỗi cập nhật mật khẩu:', error);
+      throw error;
+    }
+    return data[0];
+  }
+
+  // Xoá tài khoản
+  async deleteUserAccount(username: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('user_accounts')
+      .delete()
+      .eq('username', username);
+
+    if (error) {
+      console.error('[SupabaseAdapter] Lỗi xoá tài khoản:', error);
+      throw error;
+    }
+    return true;
   }
 }

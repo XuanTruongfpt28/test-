@@ -1,20 +1,10 @@
-/**
- * supabaseClient.ts
- * ------------------
- * Khởi tạo Supabase client dùng chung cho toàn app.
- * Cần khai báo VITE_SUPABASE_URL và VITE_SUPABASE_ANON_KEY trong file
- * `.env` (xem `.env.example`).
- */
 import { createClient } from '@supabase/supabase-js';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!url || !anonKey) {
-  console.warn(
-    '[supabaseClient] Thiếu VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. ' +
-      'Nếu VITE_STORAGE_MODE=supabase, app sẽ lỗi khi gọi API. Xem .env.example.',
-  );
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase URL hoặc Anon Key chưa được thiết lập chính xác trong .env');
 }
 
-export const supabase = createClient(url ?? '', anonKey ?? '');
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);   
