@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens cho "Xe Điện Thanh Tươi".
+ * Bảng màu lấy cảm hứng từ năng lượng xanh của xe điện: nền sáng trung
+ * tính, mực chữ xanh rêu đậm, điểm nhấn xanh ngọc (không dùng cam đất/
+ * kem mặc định thường thấy ở giao diện AI-generated).
+ */
+@theme {
+  --font-display: "Sora", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --color-bg: #f6f9f7;
+  --color-surface: #ffffff;
+  --color-ink: #10251d;
+  --color-ink-soft: #4a5f56;
+  --color-primary: #0e7c61;
+  --color-primary-dark: #0a5c48;
+  --color-accent: #14b88a;
+  --color-amber: #b8790f;
+  --color-amber-bg: #fbeed9;
+  --color-red: #ad3d29;
+  --color-red-bg: #fbe6e0;
+  --color-blue: #2563a6;
+  --color-blue-bg: #e2edf8;
+  --color-border: #dbe5df;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Vô hiệu hoá spinner mặc định của input number trên một số trình duyệt */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
