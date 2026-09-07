@@ -1,24 +1,49 @@
 import { supabase } from '../supabaseClient';
 import type { IStorageAdapter, UserAccount } from './StorageAdapter';
 
-export class SupabaseAdapter implements IStorageAdapter {
-  async getItem<T>(key: string): Promise<T | null> {
-    const { data, error } = await supabase.from(key).select('*');
-    if (error) return null;
-    return data as unknown as T;
+export class SupabaseAdapter<T = any> implements IStorageAdapter<T> {
+  private tableName: string;
+
+  constructor(tableName: string = 'user_accounts') {
+    this.tableName = tableName;
   }
 
-  async setItem<T>(key: string, value: T): Promise<void> {
+  private getTable(): string {
+    const clean = this.tableName.replace(/^tt_/, '');
+    if (clean === 'accounts') return 'user_accounts';
+    return clean;
+  }
+
+  async getAll(): Promise<T[]> {
+    const { data, error } = await supabase.from(this.getTable()).select('*');
+    if (error) {
+      console.warn(`Lỗi lấy dữ liệu bảng ${this.getTable()}:`, error.message);
+      return [];
+    }
+    return (data || []) as T[];
+  }
+
+  async saveAll(items: T[]): Promise<void> {
+    if (!items || items.length === 0) return;
+    const { error } = await supabase.from(this.getTable()).upsert(items as any);
+    if (error) {
+      console.error(`Lỗi ghi dữ liệu bảng ${this.getTable()}:`, error.message);
+    }
+  }
+
+  async getItem<U = T>(key: string): Promise<U | null> {
+    const { data, error } = await supabase.from(key).select('*');
+    if (error) return null;
+    return data as unknown as U;
+  }
+
+  async setItem<U = T>(key: string, value: U): Promise<void> {
     await supabase.from(key).upsert(value as any);
   }
 
-  async removeItem(_key: string): Promise<void> {
-    // Không dùng ở chế độ Supabase
-  }
+  async removeItem(_key: string): Promise<void> {}
 
-  async clear(): Promise<void> {
-    // Không dùng ở chế độ Supabase
-  }
+  async clear(): Promise<void> {}
 
   async getUserAccounts(): Promise<UserAccount[]> {
     const { data, error } = await supabase
