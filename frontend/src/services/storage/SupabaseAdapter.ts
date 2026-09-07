@@ -32,7 +32,7 @@ export class SupabaseAdapter<T = any> implements IStorageAdapter<T> {
 
   private mapToDb(account: Partial<UserAccount>): any {
     const dbObj: any = {};
-    if (account.id) dbObj.id = account.id;
+    dbObj.id = account.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `acc_${Date.now()}`);
     if (account.username) dbObj.username = account.username;
     if (account.name) dbObj.name = account.name;
     if ((account as any).password) dbObj.password = (account as any).password;
